@@ -23,21 +23,22 @@ from nsiqunittest.nsiqcppstyle_unittestbase import *
 
 
 def RunRule(lexer, typeName, typeFullName, decl, contextStack, typeContext):
-    if not decl and typeName == "ENUM" and typeContext is not None:
-        column = GetIndentation(lexer.GetCurToken())
-        lexer._MoveToToken(typeContext.startToken)
-        t2 = typeContext.endToken
-        while True:
-            t = lexer.GetNextTokenSkipWhiteSpaceAndCommentAndPreprocess()
-            if t is None or t == t2:
-                break
+    if decl or typeName != "ENUM" or typeContext is None:
+        return
+    column = GetIndentation(lexer.GetCurToken())
+    lexer._MoveToToken(typeContext.startToken)
+    t2 = typeContext.endToken
+    while True:
+        t = lexer.GetNextTokenSkipWhiteSpaceAndCommentAndPreprocess()
+        if t is None or t == t2:
+            break
             #            if typeContext != t.contextStack.Peek() : continue
-            if GetRealColumn(t) <= (column + 1):
-                nsiqcppstyle_reporter.Error(
-                    t,
-                    __name__,
-                    "Enum block should be indented. But the token(%s) seems to be unindented" % t.value,
-                )
+        if GetRealColumn(t) <= (column + 1):
+            nsiqcppstyle_reporter.Error(
+                t,
+                __name__,
+                f"Enum block should be indented. But the token({t.value}) seems to be unindented",
+            )
 
 
 ruleManager.AddTypeNameRule(RunRule)

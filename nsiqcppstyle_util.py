@@ -45,19 +45,14 @@ def ModulePath():
 def GetRuntimePath():
     "Return the path of this tool"
     if sys.platform == "win32":
-        runtimePath = ModulePath()
-    else:
-        modename = globals()["__name__"]
-        module = sys.modules[modename]
-        runtimePath = os.path.dirname(module.__file__)
-    return runtimePath
+        return ModulePath()
+    modename = globals()["__name__"]
+    module = sys.modules[modename]
+    return os.path.dirname(module.__file__)
 
 
 def GetSystemKey():
-    if sys.platform == "win32":
-        return "window"
-    else:
-        return "linux"
+    return "window" if sys.platform == "win32" else "linux"
 
 
 def CmpObjects(a, b):

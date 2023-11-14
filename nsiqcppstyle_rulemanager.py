@@ -85,11 +85,11 @@ class RuleManager:
         for ruleName in checkingRuleNames:
             count = self.availRuleNames.count(ruleName)
             if count == 0:
-                console.Out.Error("%s does not exist or incompatible." % ruleName)
+                console.Out.Error(f"{ruleName} does not exist or incompatible.")
                 continue
             else:
                 console.Out.Info("  - ", ruleName, "is applied.")
-            ruleModule = __import__("rules." + ruleName)
+            ruleModule = __import__(f"rules.{ruleName}")
             self.loadedRule.append(ruleModule)
         if len(self.loadedRule) == 0:
             console.Out.Ci("  No Rule is specified. Please configure rules in filefilter.txt.")

@@ -163,7 +163,6 @@ class Lexer:
         if object:
             newtab = {}
             for key, ritem in self.lexstatere.items():
-                newre = []
                 for cre, findex in ritem:
                     newfindex = []
                     for f in findex:
@@ -171,7 +170,7 @@ class Lexer:
                             newfindex.append(f)
                             continue
                         newfindex.append((getattr(object, f[0].__name__), f[1]))
-                newre.append((cre, newfindex))
+                newre = [(cre, newfindex)]
                 newtab[key] = newre
             c.lexstatere = newtab
             c.lexstateerrorf = {}
@@ -197,25 +196,24 @@ class Lexer:
         initial = self.lexstatere["INITIAL"]
         initialfuncs = []
         for part in initial:
-            for f in part[1]:
-                if f and f[0]:
-                    initialfuncs.append(f)
-
+            initialfuncs.extend(f for f in part[1] if f and f[0])
         for key, lre in self.lexstatere.items():
-            titem = []
-            for i in range(len(lre)):
-                titem.append((self.lexstateretext[key][i], _funcs_to_names(lre[i][1], self.lexstaterenames[key][i])))
+            titem = [
+                (
+                    self.lexstateretext[key][i],
+                    _funcs_to_names(lre[i][1], self.lexstaterenames[key][i]),
+                )
+                for i in range(len(lre))
+            ]
             tabre[key] = titem
 
         tf.write("_lexstatere   = %s\n" % repr(tabre))
         tf.write("_lexstateignore = %s\n" % repr(self.lexstateignore))
 
-        taberr = {}
-        for key, ef in self.lexstateerrorf.items():
-            if ef:
-                taberr[key] = ef.__name__
-            else:
-                taberr[key] = None
+        taberr = {
+            key: ef.__name__ if ef else None
+            for key, ef in self.lexstateerrorf.items()
+        }
         tf.write("_lexstateerrorf = %s\n" % repr(taberr))
 
     # ------------------------------------------------------------
@@ -225,7 +223,7 @@ class Lexer:
         if isinstance(tabfile, types.ModuleType):
             return
         basetabfilename = tabfile.split(".")[-1]
-        filename = os.path.join(outputdir, basetabfilename) + ".py"
+        filename = f"{os.path.join(outputdir, basetabfilename)}.py"
         with open(filename, "w") as tf:
             self._writetab_impl(tabfile, tf)
 
@@ -235,13 +233,12 @@ class Lexer:
     def readtab(self, tabfile, fdict):
         if isinstance(tabfile, types.ModuleType):
             lextab = tabfile
+        elif sys.version_info[0] < 3:
+            exec(f"import {tabfile} as lextab")
         else:
-            if sys.version_info[0] < 3:
-                exec("import %s as lextab" % tabfile)
-            else:
-                env = {}
-                exec("import %s as lextab" % tabfile, env, env)
-                lextab = env["lextab"]
+            env = {}
+            exec(f"import {tabfile} as lextab", env, env)
+            lextab = env["lextab"]
 
         if getattr(lextab, "_tabversion", "0.0") != __version__:
             msg = "Inconsistent PLY version"
@@ -416,7 +413,10 @@ class Lexer:
                     if lexpos == self.lexpos:
                         # Error method didn't change text position at all. This
                         # is an error.
-                        raise LexError("Scanning error. Illegal character '%s'" % (lexdata[lexpos]), lexdata[lexpos:])
+                        raise LexError(
+                            f"Scanning error. Illegal character '{lexdata[lexpos]}'",
+                            lexdata[lexpos:],
+                        )
                     lexpos = self.lexpos
                     if not newtok:
                         continue
@@ -546,7 +546,7 @@ def _form_master_re(relist, reflags, ldict, toknames):
 
         return [(lexre, lexindexfunc)], [regex], [lexindexnames]
     except Exception:
-        m = int(len(relist) / 2)
+        m = len(relist) // 2
         if m == 0:
             m = 1
         llist, lre, lnames = _form_master_re(relist[:m], reflags, ldict, toknames)
@@ -594,10 +594,7 @@ class LexerReflect:
         self.files = {}
         self.error = 0
 
-        if log is None:
-            self.log = PlyLogger(sys.stderr)
-        else:
-            self.log = log
+        self.log = PlyLogger(sys.stderr) if log is None else log
 
     # Get all of the basic information
     def get_all(self):
@@ -682,7 +679,7 @@ class LexerReflect:
                         self.log.error("State name %s must be a string", repr(name))
                         self.error = 1
                         continue
-                    if not (statetype == "inclusive" or statetype == "exclusive"):
+                    if statetype not in ["inclusive", "exclusive"]:
                         self.log.error("State type for state %s must be 'inclusive' or 'exclusive'", name)
                         self.error = 1
                         continue
@@ -710,7 +707,7 @@ class LexerReflect:
             self.funcsym[s] = []
             self.strsym[s] = []
 
-        if len(tsymbols) == 0:
+        if not tsymbols:
             self.log.error("No rules of the form t_rulename are defined")
             self.error = 1
             return
@@ -844,9 +841,7 @@ class LexerReflect:
                 self.log.error("No rules defined for state '%s'", state)
                 self.error = 1
 
-            # Validate the error function
-            efunc = self.errorf.get(state, None)
-            if efunc:
+            if efunc := self.errorf.get(state, None):
                 f = efunc
                 line = func_code(f).co_firstlineno
                 file = func_code(f).co_filename
@@ -884,8 +879,10 @@ class LexerReflect:
             with open(filename) as f:
                 lines = f.readlines()
         except UnicodeDecodeError as ex:
-            console.Out.Ci("[ERROR] UnicodeDecodeError in validate_file: " + str(ex))
-            console.Out.Ci("[ERROR] Exception occurred reading file '%s', convert from UTF16LE to UTF8" % (filename))
+            console.Out.Ci(f"[ERROR] UnicodeDecodeError in validate_file: {str(ex)}")
+            console.Out.Ci(
+                f"[ERROR] Exception occurred reading file '{filename}', convert from UTF16LE to UTF8"
+            )
             raise
         except OSError:
             return  # Couldn't find the file.  Don't worry about it
@@ -894,17 +891,13 @@ class LexerReflect:
         sre = re.compile(r"\s*(t_[a-zA-Z_0-9]*)\s*=")
 
         counthash = {}
-        linen = 1
-        for l in lines:
+        for linen, l in enumerate(lines, start=1):
             m = fre.match(l)
             if not m:
                 m = sre.match(l)
             if m:
                 name = m.group(1)
-                prev = counthash.get(name)
-                if not prev:
-                    counthash[name] = linen
-                else:
+                if prev := counthash.get(name):
                     self.log.error(
                         "%s:%d: Rule %s redefined. Previously defined on line %d",
                         filename,
@@ -913,7 +906,8 @@ class LexerReflect:
                         prev,
                     )
                     self.error = 1
-            linen += 1
+                else:
+                    counthash[name] = linen
 
 
 # -----------------------------------------------------------------------------
@@ -982,11 +976,7 @@ def lex(
         debuglog.info("lex: literals = %r", linfo.literals)
         debuglog.info("lex: states   = %r", linfo.stateinfo)
 
-    # Build a dictionary of valid token names
-    lexobj.lextokens = {}
-    for n in linfo.tokens:
-        lexobj.lextokens[n] = 1
-
+    lexobj.lextokens = {n: 1 for n in linfo.tokens}
     # Get literals specification
     if isinstance(linfo.literals, (list, tuple)):
         lexobj.lexliterals = type(linfo.literals[0])().join(linfo.literals)
@@ -1100,10 +1090,10 @@ def runmain(lexer=None, data=None):
     _token = lexer.token if lexer else token
 
     while True:
-        tok = _token()
-        if not tok:
+        if tok := _token():
+            sys.stdout.write("(%s,%r,%d,%d)\n" % (tok.type, tok.value, tok.lineno, tok.lexpos))
+        else:
             break
-        sys.stdout.write("(%s,%r,%d,%d)\n" % (tok.type, tok.value, tok.lineno, tok.lexpos))
 
 
 # -----------------------------------------------------------------------------
@@ -1116,10 +1106,7 @@ def runmain(lexer=None, data=None):
 
 def TOKEN(r):
     def set_doc(f):
-        if callable(r):
-            f.__doc__ = r.__doc__
-        else:
-            f.__doc__ = r
+        f.__doc__ = r.__doc__ if callable(r) else r
         return f
 
     return set_doc

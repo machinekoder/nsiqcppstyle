@@ -377,7 +377,7 @@ def t_CPPCOMMENT(t):
 
 
 def t_error(t):
-    console.Out.Verbose("Illegal character '%s'" % t.value[0], t.lexer.lineno)
+    console.Out.Verbose(f"Illegal character '{t.value[0]}'", t.lexer.lineno)
     t.lexer.skip(1)
 
 
@@ -403,9 +403,9 @@ class CppLexerNavigator:
                 try:
                     self.data = f.read()
                 except UnicodeDecodeError as ex:
-                    console.Out.Ci("[ERROR] UnicodeDecodeError in CppLexerNavigator: " + str(ex))
+                    console.Out.Ci(f"[ERROR] UnicodeDecodeError in CppLexerNavigator: {str(ex)}")
                     console.Out.Ci(
-                        "[ERROR] Exception occurred reading file '%s', convert from UTF16LE to UTF8" % (filename),
+                        f"[ERROR] Exception occurred reading file '{filename}', convert from UTF16LE to UTF8"
                     )
                     raise
         self.lines = self.data.splitlines()
@@ -445,7 +445,7 @@ class CppLexerNavigator:
                     self.ifdefstack.append(True)
             elif Match(r"^#\s*endif$", token.value) and len(self.ifdefstack) != 0:
                 self.ifdefstack.pop()
-        return any(not ifdef for ifdef in self.ifdefstack)
+        return not all(self.ifdefstack)
 
     def Backup(self):
         """
@@ -473,9 +473,7 @@ class CppLexerNavigator:
         Get Current Token, if No current token, return None
         """
         curToken = self.GetCurToken()
-        if curToken is not None:
-            return self.lines[curToken.lineno - 1]
-        return None
+        return self.lines[curToken.lineno - 1] if curToken is not None else None
 
     def _MoveToToken(self, token):
         self.tokenindex = token.index
@@ -488,9 +486,7 @@ class CppLexerNavigator:
         if last_cr < 0:
             last_cr = -1
         column = token.lexpos - last_cr
-        if column == 0:
-            return 1
-        return column
+        return 1 if column == 0 else column
 
     def GetCurToken(self):
         """
@@ -630,11 +626,10 @@ class CppLexerNavigator:
     def GetNextMatchingGT(self, keepCur=False):
         if keepCur:
             self.PushTokenIndex()
-        gtStack = []
         if self.GetCurToken().type != "LT":
             msg = "Matching next GT token should be examined when cur token is <"
             raise RuntimeError(msg)
-        gtStack.append(self.GetCurToken())
+        gtStack = [self.GetCurToken()]
         t = self._GetNextMatchingGTToken(gtStack)
         if keepCur:
             self.PopTokenIndex()
@@ -666,11 +661,10 @@ class CppLexerNavigator:
         """
         if keepCur:
             self.PushTokenIndex()
-        tokenStack = []
         if self.GetCurToken().type not in ["LPAREN", "LBRACE", "LBRACKET"]:
             msg = "Matching token should be examined when cur token is { [ ("
             raise RuntimeError(msg)
-        tokenStack.append(self.GetCurToken())
+        tokenStack = [self.GetCurToken()]
         t = self._GetNextMatchingToken(tokenStack)
         if keepCur:
             self.PopTokenIndex()
@@ -771,12 +765,10 @@ class CppLexerNavigator:
     def GetPrevMatchingToken(self, keepCur=False):
         if keepCur:
             self.PushTokenIndex()
-        tokenStack = []
         if self.GetCurToken().type not in ["RPAREN", "RBRACE", "RBRACKET"]:
             msg = "Matching token should be examined when cur token is } ) ]"
             raise RuntimeError(msg)
-        tokenStack.append(self.GetCurToken())
-
+        tokenStack = [self.GetCurToken()]
         t = self._GetPrevMatchingToken(tokenStack)
         if keepCur:
             self.PopTokenIndex()
@@ -815,28 +807,22 @@ class CppLexerNavigator:
     def _SkipContext(self, skipWhiteSpace=False, skipComment=False):
         context = []
         if skipWhiteSpace:
-            context.append("SPACE")
-            context.append("LINEFEED")
+            context.extend(("SPACE", "LINEFEED"))
         if skipComment:
-            context.append("COMMENT")
-            context.append("CPPCOMMENT")
+            context.extend(("COMMENT", "CPPCOMMENT"))
         return context
 
     def _GetNextToken(self):
-        if self.tokenindex < self.tokenlistsize - 1:
-            self.tokenindex = self.tokenindex + 1
-            return self.tokenlist[self.tokenindex]
-        else:
+        if self.tokenindex >= self.tokenlistsize - 1:
             return None
+        self.tokenindex = self.tokenindex + 1
+        return self.tokenlist[self.tokenindex]
 
     def _GetPrevToken(self):
-        if self.tokenindex >= 0:
-            self.tokenindex = self.tokenindex - 1
-            if self.tokenindex == -1:
-                return None
-            return self.tokenlist[self.tokenindex]
-        else:
+        if self.tokenindex < 0:
             return None
+        self.tokenindex = self.tokenindex - 1
+        return None if self.tokenindex == -1 else self.tokenlist[self.tokenindex]
 
     def GetPrevTokenInType(self, type, keepCur=True, skipPreprocess=True):
         if keepCur:
@@ -844,11 +830,12 @@ class CppLexerNavigator:
         token = None
         while True:
             token = self.GetPrevToken()
-            if token is None:
-                break
-            elif token.type == type:
-                if skipPreprocess and token.pp:
-                    continue
+            if (
+                token is not None
+                and token.type == type
+                and (not skipPreprocess or not token.pp)
+                or token is None
+            ):
                 break
         if keepCur:
             self.PopTokenIndex()
@@ -860,11 +847,12 @@ class CppLexerNavigator:
         token = None
         while True:
             token = self.GetPrevToken(False, False, skipPreprocess, False)
-            if token is None:
-                break
-            elif token.type in typelist:
-                if skipPreprocess and token.pp:
-                    continue
+            if (
+                token is not None
+                and token.type in typelist
+                and (not skipPreprocess or not token.pp)
+                or token is None
+            ):
                 break
         if keepCur:
             self.PopTokenIndex()
@@ -884,11 +872,12 @@ class CppLexerNavigator:
         token = None
         while True:
             token = self.GetNextToken()
-            if token is None:
-                break
-            elif token.type == type:
-                if skipPreprocess and token.pp:
-                    continue
+            if (
+                token is not None
+                and token.type == type
+                and (not skipPreprocess or not token.pp)
+                or token is None
+            ):
                 break
         if keepCur:
             self.PopTokenIndex()
@@ -900,11 +889,12 @@ class CppLexerNavigator:
         token = None
         while True:
             token = self.GetNextToken()
-            if token is None:
-                break
-            elif token.type in typelist:
-                if skipPreprocess and token.pp:
-                    continue
+            if (
+                token is not None
+                and token.type in typelist
+                and (not skipPreprocess or not token.pp)
+                or token is None
+            ):
                 break
         if keepCur:
             self.PopTokenIndex()
@@ -918,9 +908,7 @@ class CppLexerNavigator:
 
         if token_id3 is None and token_id2 is not None:
             return True
-        if token_id2 is not None and token_id2.lexpos < token_id3.lexpos:
-            return True
-        return False
+        return token_id2 is not None and token_id2.lexpos < token_id3.lexpos
 
 
 class Context:
@@ -933,7 +921,9 @@ class Context:
         self.additional = ""
 
     def __str__(self):
-        return ", ".join([self.type, "'" + self.name + "'", str(self.startToken), str(self.endToken)])
+        return ", ".join(
+            [self.type, f"'{self.name}'", str(self.startToken), str(self.endToken)]
+        )
 
     def IsContextStart(self, token):
         return token == self.startToken
@@ -942,9 +932,10 @@ class Context:
         return token == self.endToken
 
     def InScope(self, token):
-        if token.lexpos >= self.startToken.lexpos and token.lexpos <= self.endToken.lexpos:
-            return True
-        return False
+        return (
+            token.lexpos >= self.startToken.lexpos
+            and token.lexpos <= self.endToken.lexpos
+        )
 
 
 class ContextStack:
@@ -955,14 +946,10 @@ class ContextStack:
         self.contextstack.append(context)
 
     def Pop(self):
-        if self.Size() == 0:
-            return None
-        return self.contextstack.pop()
+        return None if self.Size() == 0 else self.contextstack.pop()
 
     def Peek(self):
-        if self.Size() == 0:
-            return None
-        return self.contextstack[-1]
+        return None if self.Size() == 0 else self.contextstack[-1]
 
     def SigPeek(self):
         i = len(self.contextstack)
@@ -991,10 +978,9 @@ class ContextStack:
         return False
 
     def __str__(self):
-        a = ""
-        for eachContext in self.contextstack:
-            a += eachContext.__str__() + " >> "
-        return a
+        return "".join(
+            f"{eachContext.__str__()} >> " for eachContext in self.contextstack
+        )
 
     def Copy(self):
         contextStack = ContextStack()
@@ -1015,9 +1001,7 @@ class _ContextStackStack:
         return self.contextstackstack.pop()
 
     def Peek(self):
-        if len(self.contextstackstack) == 0:
-            return None
-        return self.contextstackstack[-1]
+        return None if len(self.contextstackstack) == 0 else self.contextstackstack[-1]
 
 
 ############################################################################

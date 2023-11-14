@@ -82,7 +82,7 @@ def RunRule(lexer, fullName, decl, contextStack, context):
         nsiqcppstyle_reporter.Error(
             t,
             __name__,
-            "Doxygen Comment should be provided in front of function (%s) in impl file." % fullName,
+            f"Doxygen Comment should be provided in front of function ({fullName}) in impl file.",
         )
 
 

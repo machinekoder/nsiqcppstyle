@@ -24,42 +24,43 @@ from nsiqunittest.nsiqcppstyle_unittestbase import *
 
 
 def RunRule(lexer, fullName, decl, contextStack, context):
-    if decl:
-        t2 = lexer.GetCurToken()
-        lexer.GetNextTokenInType("LPAREN", False, True)
-        lexer.PushTokenIndex()
-        rparen = lexer.GetNextMatchingToken()
-        lexer.PopTokenIndex()
-        count = 0
+    if not decl:
+        return
+    t2 = lexer.GetCurToken()
+    lexer.GetNextTokenInType("LPAREN", False, True)
+    lexer.PushTokenIndex()
+    rparen = lexer.GetNextMatchingToken()
+    lexer.PopTokenIndex()
+    count = 0
 
-        while True:
-            t = lexer.GetNextTokenSkipWhiteSpaceAndCommentAndPreprocess()
-            if rparen is None or t == rparen or t is None:
-                break
-            if t.type in ["ID", "BOOL", "CHAR", "INT", "LONG", "DOUBLE", "FLOAT", "SHORT", "VOID"]:
-                if t.type == "VOID":
-                    nt = lexer.PeekNextTokenSkipWhiteSpaceAndCommentAndPreprocess()
-                    if nt == rparen:
-                        return
-                count += 1
-            elif t.type == "LT":
-                lexer.GetNextMatchingGT()
-            elif t.type == "COMMA":
-                if count == 1:
-                    nsiqcppstyle_reporter.Error(
-                        t2,
-                        __name__,
-                        "function (%s) has non named parameter. use named parameter." % fullName,
-                    )
-                    break
-                count = 0
-            elif rparen.lexpos <= t.lexpos and count == 1:
+    while True:
+        t = lexer.GetNextTokenSkipWhiteSpaceAndCommentAndPreprocess()
+        if rparen is None or t == rparen or t is None:
+            break
+        if t.type in ["ID", "BOOL", "CHAR", "INT", "LONG", "DOUBLE", "FLOAT", "SHORT", "VOID"]:
+            if t.type == "VOID":
+                nt = lexer.PeekNextTokenSkipWhiteSpaceAndCommentAndPreprocess()
+                if nt == rparen:
+                    return
+            count += 1
+        elif t.type == "LT":
+            lexer.GetNextMatchingGT()
+        elif t.type == "COMMA":
+            if count == 1:
                 nsiqcppstyle_reporter.Error(
                     t2,
                     __name__,
-                    "function (%s) has non named parameter. use named parameter." % fullName,
+                    f"function ({fullName}) has non named parameter. use named parameter.",
                 )
                 break
+            count = 0
+        elif rparen.lexpos <= t.lexpos and count == 1:
+            nsiqcppstyle_reporter.Error(
+                t2,
+                __name__,
+                f"function ({fullName}) has non named parameter. use named parameter.",
+            )
+            break
 
 
 ruleManager.AddFunctionNameRule(RunRule)

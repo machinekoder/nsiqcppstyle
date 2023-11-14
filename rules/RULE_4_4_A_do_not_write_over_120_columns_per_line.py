@@ -25,9 +25,6 @@ def RunRule(lexer, line, lineno):
                 __name__,
                 "Lines should very rarely be longer than 120 characters",
             )
-        else:
-            # add code to recognise tabs as charachters
-            pass
 
 
 ruleManager.AddLineRule(RunRule)

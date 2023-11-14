@@ -64,7 +64,7 @@ class nct(unittest.TestCase):
         global errors
         result = self._CheckErrorContent(msg)
         # Error with message
-        assert not result, "Expected no error but got: " + str(errors)
+        assert not result, f"Expected no error but got: {str(errors)}"
 
     def _CheckErrorContent(self, msg):
         global errors
