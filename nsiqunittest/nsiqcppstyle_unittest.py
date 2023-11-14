@@ -52,7 +52,9 @@ class unitTest(unittest.TestCase):
 
     def __testFunctionSpecifier(self, specifier):
         expectedTokenTypes = ["VOID", "FUNCTION", "LPAREN", "RPAREN", "IGNORE", "SEMI"]
-        self.__expectTokenTypes("void FunctionName() " + specifier + ";", expectedTokenTypes)
+        self.__expectTokenTypes(
+            f"void FunctionName() {specifier};", expectedTokenTypes
+        )
 
     def testIgnoreFinalFunctionSpecifier(self):
         self.__testFunctionSpecifier("final")

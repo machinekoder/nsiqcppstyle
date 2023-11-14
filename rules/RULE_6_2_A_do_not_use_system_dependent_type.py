@@ -28,10 +28,7 @@ def RunRule(lexer, contextStack):
             nsiqcppstyle_reporter.Error(
                 t,
                 __name__,
-                "Do not use system dependent type({}). Use system independent type like ({})".format(
-                    t.value,
-                    systemDependentType[t.type],
-                ),
+                f"Do not use system dependent type({t.value}). Use system independent type like ({systemDependentType[t.type]})",
             )
 
 

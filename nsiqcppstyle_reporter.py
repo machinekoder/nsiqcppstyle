@@ -82,9 +82,10 @@ def ReportSummaryToScreen(analyzedFiles, nsiqcppstyle_state, filter):
             console.Out.Info(" - ", checker, "rule violated :", nsiqcppstyle_state.errorPerChecker[checker])
         console.Out.Info("\n================================ Violated File Details ===============================")
         for eachFile in nsiqcppstyle_state.errorPerFile:
-            count = 0
-            for eachRule in nsiqcppstyle_state.errorPerFile[eachFile]:
-                count += nsiqcppstyle_state.errorPerFile[eachFile][eachRule]
+            count = sum(
+                nsiqcppstyle_state.errorPerFile[eachFile][eachRule]
+                for eachRule in nsiqcppstyle_state.errorPerFile[eachFile]
+            )
             console.Out.Info(" - ", eachFile, " violated in total : ", count)
             for eachRule in nsiqcppstyle_state.errorPerFile[eachFile]:
                 console.Out.Info("   * ", eachRule, " : ", nsiqcppstyle_state.errorPerFile[eachFile][eachRule])
@@ -103,10 +104,7 @@ def CloseReport(format):
 
 
 def IsRuleUsed(ruleName, ruleNames):
-    if ruleNames.count(ruleName) == 0:
-        return "false"
-    else:
-        return "true"
+    return "false" if ruleNames.count(ruleName) == 0 else "true"
 
 
 def ReportRules(availRuleName, ruleNames):
@@ -129,16 +127,14 @@ def ReportRules(availRuleName, ruleNames):
 
 
 def StartDir(dirname):
-    if _nsiqcppstyle_state.output_format == "xml":
-        pass
+    pass
 
 
 # writer.write("<dir name='%s'>\n" % (dirname))
 
 
 def EndDir():
-    if _nsiqcppstyle_state.output_format == "xml":
-        pass
+    pass
         # writer.write("</dir>\n")
 
 
@@ -154,8 +150,6 @@ def StartTarget(targetname):
 
 def EndTarget():
     """Write Report when each target is ended"""
-    if _nsiqcppstyle_state.output_format == "xml":
-        pass  # writer.write("</target>\n")
 
 
 def StartFile(dirname, filename):
@@ -214,7 +208,7 @@ def ErrorInternal(t, ruleName, message):
         _nsiqcppstyle_state.IncrementErrorCount(ruleName, t.filename)
         url = ""
         if _nsiqcppstyle_state.showUrl:
-            url = "http://nsiqcppstyle.appspot.com/rule_doc/" + ruleName
+            url = f"http://nsiqcppstyle.appspot.com/rule_doc/{ruleName}"
         if _nsiqcppstyle_state.output_format == "emacs":
             sys.stdout.write(f"{t.filename}:{t.lineno}:  {message}  [{ruleName}] {url}\n")
         elif _nsiqcppstyle_state.output_format == "vs7":

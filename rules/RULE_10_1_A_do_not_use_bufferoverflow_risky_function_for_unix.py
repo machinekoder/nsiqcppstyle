@@ -37,11 +37,6 @@ unix_bufferoverflow_functions = (
 
 
 def RunRule(lexer, contextStack):
-    # Boost.Format, Folly.Format don't provide printf but if they do,
-    # that can be handled by adding (or others) to whitelist
-    whitelist = ["fmt"]
-    blacklist = ["std", ""]  # to catch ::printf
-
     t = lexer.GetCurToken()
     if t.type == "ID" and t.value in unix_bufferoverflow_functions:
         t2 = lexer.PeekNextTokenSkipWhiteSpaceAndComment()
@@ -50,6 +45,11 @@ def RunRule(lexer, contextStack):
             # tribool state: safe, unsafe, unknown
             safe_alternative = False
             unsafe_alternative = False
+            # Boost.Format, Folly.Format don't provide printf but if they do,
+            # that can be handled by adding (or others) to whitelist
+            whitelist = ["fmt"]
+            blacklist = ["std", ""]  # to catch ::printf
+
             if t3 is None:
                 # C style usage: flat out error
                 unsafe_alternative = True
@@ -66,12 +66,16 @@ def RunRule(lexer, contextStack):
                     unsafe_alternative = True
                 # elif unknown namespace => unknown safety
             if unsafe_alternative:
-                nsiqcppstyle_reporter.Error(t, __name__, "Do not use bufferoverflow risky function(%s)" % t.value)
+                nsiqcppstyle_reporter.Error(
+                    t,
+                    __name__,
+                    f"Do not use bufferoverflow risky function({t.value})",
+                )
             elif not safe_alternative:
                 nsiqcppstyle_reporter.Error(
                     t,
                     __name__,
-                    "Caution: Uknown imlementation of a bufferoverflow risky function(%s)" % t.value,
+                    f"Caution: Uknown imlementation of a bufferoverflow risky function({t.value})",
                 )
 
 

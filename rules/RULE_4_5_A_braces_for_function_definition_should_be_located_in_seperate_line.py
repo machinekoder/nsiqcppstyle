@@ -31,25 +31,26 @@ from nsiqunittest.nsiqcppstyle_unittestbase import *
 
 
 def RunRule(lexer, fullName, decl, contextStack, typeContext):
-    if not decl and typeContext is not None:
-        t = lexer.GetNextTokenInType("LBRACE", False, True)
-        if t is not None:
-            t2 = typeContext.endToken
-            if t2 is not None and t.lineno != t2.lineno:
-                prevToken = lexer.GetPrevTokenSkipWhiteSpaceAndCommentAndPreprocess()
-                # print contextStack.Peek()
-                if prevToken is not None and prevToken.lineno == t.lineno:
-                    nsiqcppstyle_reporter.Error(
-                        t,
-                        __name__,
-                        "The brace for function definition should be located in start of line",
-                    )
-                if t2.lineno != t.lineno and GetRealColumn(t2) != GetRealColumn(t):
-                    nsiqcppstyle_reporter.Error(
-                        t2,
-                        __name__,
-                        "The brace for function definition should be located in same column",
-                    )
+    if decl or typeContext is None:
+        return
+    t = lexer.GetNextTokenInType("LBRACE", False, True)
+    if t is not None:
+        t2 = typeContext.endToken
+        if t2 is not None and t.lineno != t2.lineno:
+            prevToken = lexer.GetPrevTokenSkipWhiteSpaceAndCommentAndPreprocess()
+            # print contextStack.Peek()
+            if prevToken is not None and prevToken.lineno == t.lineno:
+                nsiqcppstyle_reporter.Error(
+                    t,
+                    __name__,
+                    "The brace for function definition should be located in start of line",
+                )
+            if t2.lineno != t.lineno and GetRealColumn(t2) != GetRealColumn(t):
+                nsiqcppstyle_reporter.Error(
+                    t2,
+                    __name__,
+                    "The brace for function definition should be located in same column",
+                )
 
 
 ruleManager.AddFunctionNameRule(RunRule)

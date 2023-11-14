@@ -22,25 +22,26 @@ from nsiqunittest.nsiqcppstyle_unittestbase import *
 
 
 def RunRule(lexer, typeName, typeFullName, decl, contextStack, typeContext):
-    if not decl and typeContext is not None:
+    if decl or typeContext is None:
+        return
         #        column = GetRealColumn(lexer.GetCurToken())
-        if typeName == "ENUM":
-            lexer._MoveToToken(typeContext.startToken)
-            while True:
-                nt = lexer.GetNextTokenInTypeList(["COMMA", "RBRACE"], False, True)
-                if nt is None or nt == typeContext.endToken:
-                    break
-                if typeContext != nt.contextStack.Peek():
-                    continue
-                nt2 = lexer.PeekNextTokenSkipWhiteSpaceAndCommentAndPreprocess()
-                nt3 = lexer.PeekPrevTokenSkipWhiteSpaceAndCommentAndPreprocess()
+    if typeName == "ENUM":
+        lexer._MoveToToken(typeContext.startToken)
+        while True:
+            nt = lexer.GetNextTokenInTypeList(["COMMA", "RBRACE"], False, True)
+            if nt is None or nt == typeContext.endToken:
+                break
+            if typeContext != nt.contextStack.Peek():
+                continue
+            nt2 = lexer.PeekNextTokenSkipWhiteSpaceAndCommentAndPreprocess()
+            nt3 = lexer.PeekPrevTokenSkipWhiteSpaceAndCommentAndPreprocess()
                 # print nt, nt2,nt3
-                if nt.lineno == nt2.lineno and nt3.lineno == nt.lineno:
-                    nsiqcppstyle_reporter.Error(
-                        nt2,
-                        __name__,
-                        "Each enum item(%s) should be located in the different line" % nt2.value,
-                    )
+            if nt.lineno == nt2.lineno and nt3.lineno == nt.lineno:
+                nsiqcppstyle_reporter.Error(
+                    nt2,
+                    __name__,
+                    f"Each enum item({nt2.value}) should be located in the different line",
+                )
 
 
 ruleManager.AddTypeNameRule(RunRule)

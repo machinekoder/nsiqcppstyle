@@ -27,15 +27,16 @@ def RunRule(lexer, fullName, decl, contextStack, context):
     if not decl and context is not None:
         startline = context.startToken.lineno
         endline = context.endToken.lineno
-        count = 0
-        for eachLine in lexer.lines[startline - 1 : endline - 1]:
-            if not Match(r"^\s*$", eachLine):
-                count += 1
+        count = sum(
+            1
+            for eachLine in lexer.lines[startline - 1 : endline - 1]
+            if not Match(r"^\s*$", eachLine)
+        )
         if count > 200:
             nsiqcppstyle_reporter.Error(
                 context.startToken,
                 __name__,
-                "Do not write function over non blank 200 lines(%s)." % fullName,
+                f"Do not write function over non blank 200 lines({fullName}).",
             )
 
 

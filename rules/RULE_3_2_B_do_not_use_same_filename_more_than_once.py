@@ -41,10 +41,7 @@ def RunRule(lexer, filename, dirname):
         nsiqcppstyle_reporter.Error(
             DummyToken(lexer.filename, "", 0, 0),
             __name__,
-            "Do not use same filename({}) more than once. This filename is used in {}".format(
-                filename,
-                ", ".join(filenameMap[filename]),
-            ),
+            f'Do not use same filename({filename}) more than once. This filename is used in {", ".join(filenameMap[filename])}',
         )
 
 

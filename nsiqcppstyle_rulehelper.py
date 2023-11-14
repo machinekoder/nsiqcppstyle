@@ -97,6 +97,4 @@ def IsConstructor(value, fullName, context):
 
 def IsOperator(value):
     """Check if the passed value is 'operator'"""
-    if value is not None and value == "operator":
-        return True
-    return False
+    return value is not None and value == "operator"
